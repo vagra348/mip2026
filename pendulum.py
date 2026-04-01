@@ -6,6 +6,8 @@ import numpy as np
 
 dt = 1/240 # pybullet simulation step
 q0 = 0.5   # starting position (radian)
+qd = 1.0   # desired position (radian)
+k = 2.0    # proportional coefficient
 g = 10
 L = 0.8
 gui = False
@@ -26,8 +28,8 @@ p.setJointMotorControl2(bodyIndex=boxId, jointIndex=1, targetPosition=q0, contro
 for _ in range(1000):
     p.stepSimulation()
 
-# turn off the motor for the free motion
-p.setJointMotorControl2(bodyIndex=boxId, jointIndex=1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
+# # turn off the motor for the free motion
+# p.setJointMotorControl2(bodyIndex=boxId, jointIndex=1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
 
 t = 0
 logTime = [t]
@@ -36,6 +38,16 @@ maxTime = 5
 while t < maxTime:
     p.stepSimulation()
     pos = p.getJointState(boxId, 1)[0]
+    e = pos - qd
+    w = -k*e
+
+    p.setJointMotorControl2(
+        bodyIndex=boxId,
+        jointIndex=1,
+        targetVelocity=w,
+        controlMode=p.VELOCITY_CONTROL
+    )
+
     logTheta.append(pos)
     t += dt
     logTime.append(t)
@@ -43,24 +55,53 @@ while t < maxTime:
         time.sleep(dt)
 p.disconnect()
 
+def symp_euler(fun, x0, TT):
+    x1 = np.array(x0)
+    xx = np.array(x1)
+    for i in range(len(TT)-1):
+        dt = (TT[i+1] - TT[i])
+        x1[1] += fun(x1, 0)[1]*dt
+        x1[0] += x1[1]*dt
+        xx = np.vstack((xx,x1))
+    return xx
+
 def right_part(x, t):
     return np.array([x[1],
                      -g/L * np.sin(x[0])])
 
-# substitute with pybullet-based integration method
-theta = odeint(func=right_part,
-               y0=[q0, 0],
-               t=logTime)
+# # substitute with pybullet-based integration method
+# theta = odeint(func=right_part,
+#                y0=[q0, 0],
+#                t=logTime)
 
-logThetaInt = theta[:,0]
+# logThetaInt = theta[:,0]
 
-# L2: ||logTheta - logThetaInt||
-# diff = abs(logTheta-logThetaInt)
-# L2 = 1/N * sqrt(diff[0]**2 + diff[1]**2 + ...)
-# Linf = max(diff)
+# theta = symp_euler(right_part, [q0, 0], logTime)
+# logThetaEuler = theta[:,0]
+
+# # L2: ||logTheta - logThetaInt||
+# # diff = abs(logTheta-logThetaInt)
+# # L2 = 1/N * sqrt(diff[0]**2 + diff[1]**2 + ...)
+# # Linf = max(diff)
+
+# traj_absdiff = np.abs(logTheta - logThetaInt)
+# l2_norm = np.sqrt((traj_absdiff**2).sum())
+# print("ODEINT")
+# print(f'L_2 norm = {l2_norm}')
+# l_inf = traj_absdiff.max()
+# print(f'L_inf norm = {l_inf}')
+
+# traj_absdiff = np.abs(logTheta - logThetaEuler)
+# l2_norm = np.sqrt((traj_absdiff**2).sum())
+# print("EULER")
+# print(f'L_2 norm = {l2_norm}')
+# l_inf = traj_absdiff.max()
+# print(f'L_inf norm = {l_inf}')
+
 
 plt.plot(logTime, logTheta, label='pybullet')
-plt.plot(logTime, logThetaInt, label='odeint')
+# plt.plot(logTime, logThetaInt, label='odeint')
+# plt.plot(logTime, logThetaEuler, label='euler')
 plt.grid(True)
 plt.legend()
 plt.show()
