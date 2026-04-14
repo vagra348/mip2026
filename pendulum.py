@@ -7,7 +7,9 @@ import numpy as np
 dt = 1/240 # pybullet simulation step
 q0 = 0.5   # starting position (radian)
 qd = 1.0   # desired position (radian)
-k = 2.0    # proportional coefficient
+kp = 40.0    # proportional coefficient
+ki = 40.0    # integral coeffiecient
+kd = 10.0   # differential coefficient
 g = 10
 L = 0.8
 gui = False
@@ -28,27 +30,44 @@ p.setJointMotorControl2(bodyIndex=boxId, jointIndex=1, targetPosition=q0, contro
 for _ in range(1000):
     p.stepSimulation()
 
-# # turn off the motor for the free motion
-# p.setJointMotorControl2(bodyIndex=boxId, jointIndex=1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
+# turn off the motor for the free motion
+p.setJointMotorControl2(bodyIndex=boxId, jointIndex=1, targetVelocity=0, controlMode=p.VELOCITY_CONTROL, force=0)
 
 t = 0
 logTime = [t]
 logTheta = [q0]
-maxTime = 5
+logCtrl = [0]
+maxTime = 20
+e_int = 0 # error integral
+e_prev = 0
 while t < maxTime:
     p.stepSimulation()
     pos = p.getJointState(boxId, 1)[0]
     e = pos - qd
-    w = -k*e
+    de = (e - e_prev)/dt
+    e_prev = e
+    e_int += e * dt
+    # ПИД-регулятор
+    # Пропорционально-интегрально-дифференциальный регулятор
+    u = -kp*e -ki * e_int -kd * de
+    # u=0
+
+    # p.setJointMotorControl2(
+    #     bodyIndex=boxId,
+    #     jointIndex=1,
+    #     targetVelocity=u,
+    #     controlMode=p.VELOCITY_CONTROL
+    # )
 
     p.setJointMotorControl2(
         bodyIndex=boxId,
         jointIndex=1,
-        targetVelocity=w,
-        controlMode=p.VELOCITY_CONTROL
+        force=u,
+        controlMode=p.TORQUE_CONTROL
     )
 
     logTheta.append(pos)
+    logCtrl.append(u)
     t += dt
     logTime.append(t)
     if gui:
@@ -98,10 +117,20 @@ def right_part(x, t):
 # l_inf = traj_absdiff.max()
 # print(f'L_inf norm = {l_inf}')
 
+# ddq = -g/L*sin(q) - k*dq + tau
+# ddq = -g/L*sin(q) + tau
 
-plt.plot(logTime, logTheta, label='pybullet')
-# plt.plot(logTime, logThetaInt, label='odeint')
-# plt.plot(logTime, logThetaEuler, label='euler')
+
+
+plt.subplot(2,1,1)
+plt.plot(logTime, logTheta, label='theta')
+plt.plot([logTime[0], logTime[-1]], [qd, qd], 'r--', 'desired')
 plt.grid(True)
 plt.legend()
+
+plt.subplot(2,1,2)
+plt.plot(logTime, logCtrl, label='ctrl')
+plt.grid(True)
+plt.legend()
+
 plt.show()
