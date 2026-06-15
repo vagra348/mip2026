@@ -1,4 +1,4 @@
-import pybullet as p
+﻿import pybullet as p
 import time
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,31 +27,31 @@ points = np.array([
 ])
 
 
-# Modern Robotics, 9.3: beta(t) = a0 + a1*t + a2*t^2 + a3*t^3, формула (9.25)
+# Modern Robotics, 9.3: beta(t) = a0 + a1*t + a2*t^2 + a3*t^3, С„РѕСЂРјСѓР»Р° (9.25)
 def cubic_coefficients(p0, p1, v0, v1, T):
     a0 = p0
     a1 = v0
-    a2 = (3 * p1 - 3 * p0 - 2 * v0 * T - v1 * T) / T**2   # MR, формула (9.28)
-    a3 = (2 * p0 + (v0 + v1) * T - 2 * p1) / T**3   # MR, формула (9.29)
+    a2 = (3 * p1 - 3 * p0 - 2 * v0 * T - v1 * T) / T**2   # MR, С„РѕСЂРјСѓР»Р° (9.28)
+    a3 = (2 * p0 + (v0 + v1) * T - 2 * p1) / T**3   # MR, С„РѕСЂРјСѓР»Р° (9.29)
     return a0, a1, a2, a3
 
 
-# проверка выхода точек за границы достижимости
+# РїСЂРѕРІРµСЂРєР° РІС‹С…РѕРґР° С‚РѕС‡РµРє Р·Р° РіСЂР°РЅРёС†С‹ РґРѕСЃС‚РёР¶РёРјРѕСЃС‚Рё
 maxRadius = L1 + L2
 pointsOk = True
 for i in range(len(points)):
     dist = np.linalg.norm(points[i] - baseXZ)
     if dist > maxRadius:
         pointsOk = False
-        print(f"Точка {i} недостижима: {points[i]}, расстояние = {dist:.3f}")
+        print(f"РўРѕС‡РєР° {i} РЅРµРґРѕСЃС‚РёР¶РёРјР°: {points[i]}, СЂР°СЃСЃС‚РѕСЏРЅРёРµ = {dist:.3f}")
 
 if not pointsOk:
-    print(f"Интервалы достижимости: x: [{baseXZ[0] - maxRadius}, {baseXZ[0] + maxRadius}], "
+    print(f"РРЅС‚РµСЂРІР°Р»С‹ РґРѕСЃС‚РёР¶РёРјРѕСЃС‚Рё: x: [{baseXZ[0] - maxRadius}, {baseXZ[0] + maxRadius}], "
           f"z: [{baseXZ[1] - maxRadius}, {baseXZ[1] + maxRadius}]")
-    raise SystemExit("Недостижимая точка")
+    raise SystemExit("РќРµРґРѕСЃС‚РёР¶РёРјР°СЏ С‚РѕС‡РєР°")
 
 
-# скорости в проходимых точках: 0 в начале и конце, НЕ ноль в промеж-х, т.к. в задании - без остановок
+# СЃРєРѕСЂРѕСЃС‚Рё РІ РїСЂРѕС…РѕРґРёРјС‹С… С‚РѕС‡РєР°С…: 0 РІ РЅР°С‡Р°Р»Рµ Рё РєРѕРЅС†Рµ, РќР• РЅРѕР»СЊ РІ РїСЂРѕРјРµР¶-С…, С‚.Рє. РІ Р·Р°РґР°РЅРёРё - Р±РµР· РѕСЃС‚Р°РЅРѕРІРѕРє
 waypointVelocities = np.zeros_like(points)
 for i in range(1, len(points) - 1):
     waypointVelocities[i] = (points[i + 1] - points[i - 1]) / (2 * segmentTime)
@@ -72,7 +72,7 @@ for i in range(segmentCount):
 physicsClient = p.connect(p.GUI if gui else p.DIRECT)
 p.setGravity(0, 0, -g)
 p.setTimeStep(dt)
-boxId = p.loadURDF("./two-link.urdf.xml", useFixedBase=True)
+boxId = p.loadURDF("./simple.urdf.xml", useFixedBase=True)
 
 for joint in jointIndices:
     p.setJointMotorControl2(
@@ -168,3 +168,4 @@ plt.grid(True)
 plt.legend()
 
 plt.show()
+
